@@ -2,6 +2,8 @@ var cors = require('cors') // para soportar cross domain
 var express = require('express'); // servidor web
 var bodyParser = require('body-parser'); // para recibir y parsear content en formato json
 
+var fs = require('fs');
+var movieData = JSON.parse(fs.readFileSync("movies.json", "utf8"));
 
 // constante para definir el puerto a ser usado
 var PORT_NUMBER = 8000;
@@ -23,14 +25,20 @@ app.get('/home', function(request, response){
     response.sendfile('index.html');
 });
 
+app.get('/getmoviedata', function(req, res){
+    res.send(movieData);
+});
+
+app.get('/getMoviesData', function(req, res){
+	//var moviesResult = [];
+	res.send(movieData);
+});
+
 
 app.get('/getchart', function(req, res) {
 	res.send(req.query.temp+' '+ req.query.title+ ' --- Hola mundo');
 });
 
-app.get('/movieQuery', function(req, res) {
-	res.send(req.query.temp + ' -- Im working');
-});
 
 
 app.post('/savechart', function(req, res) {
