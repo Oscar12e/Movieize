@@ -1,0 +1,12 @@
+Estrategia a seguir para salvar analisis de algoritmos (v.0.0):
+- Cargar los datos del JSON para convertirlos en un string que será procesado por un dinosaurio,
+    que va a convertir el string en una lista de json.
+- Tomar la lista de JSON para generar tablas hash para cada una de las maneras de buscar las peliculas.
+   Tablas que van a usar string como llave y lista de int (indices a la lista) como contenido.
+- Lograr que el server sea capaz de enviar los hash de busqueda y la lista al cliente.
+
+.
+.
+.
+
+- Ver muchos videos de code train para entender: JS, programación y diseño web, ente otras cosas.
