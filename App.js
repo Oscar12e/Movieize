@@ -1,15 +1,27 @@
+//Proyecto 2 - Movielize
+//Óscar Cortés Cordero - 2016136191
+
+
+//Imports
 var cors = require('cors') // para soportar cross domain
 var express = require('express'); // servidor web
 var bodyParser = require('body-parser'); // para recibir y parsear content en formato json
+var fs = require('fs'); //Used to read local readFileSync
+var socket = require("socket.io");
 
-var fs = require('fs');
-var movieData = JSON.parse(fs.readFileSync("movies.json", "utf8"));
+console.log("App server is running.");
 
-// constante para definir el puerto a ser usado
-var PORT_NUMBER = 8000;
 
-// se inicia el servidor web express
-var app = new express()
+//Constant values
+var PORT_NUMBER = 8000; // constante para definir el puerto a ser usado
+
+//Variables for the server
+var app = new express();
+var movieData = JSON.parse(fs.readFileSync("data/movies.json", "utf8"));
+console.log(movieData[0]["year"]);
+var io;
+
+//Sockes
 
 // iniciar el parsing de json
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -48,7 +60,15 @@ app.post('/savechart', function(req, res) {
 
 
 // escuchar comunicacion sobre el puerto indicado en HTTP
-app.listen(PORT_NUMBER);
+var server = app.listen(PORT_NUMBER);
+io = socket(server); //Starts the comunication between server and clients
+
+io.sockets.on('connection', newConnection);
+
+function newConnection(pSocket){
+  console.log("New conection registered: " + pSocket.id);
+
+}
+
+
 console.log("Listening on port "+PORT_NUMBER)
-
-
