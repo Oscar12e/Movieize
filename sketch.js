@@ -5,7 +5,8 @@ var showingData; 	//JSON for currently shown data
 //Components use to get the parameters from users
 var title, genre, actors, director, yearBegin, yearEnd, buttonSearch;
 
-const COLOR = {
+//Codigos de colores para cada una de las burbujas según su genero
+const COLOR_GENDER = {
 	"Comedy": (0,255,0),
 	"null": (255,255,255)
 }
@@ -19,14 +20,11 @@ function preload() {
 
 function setup() {
 	createCanvas(windowWidth, windowHeight);
-	
-	//testMessage = createElement('p', 'Largo: ' + moviesData.length().toString()).position(400,395);
-	
-	//Creates all the inputs
-	
 	loadComponents();
-	
+	showingData = []; 		
 }
+
+
 function loadMovies(data){
 	moviesData = bin25String(data["bytes"]);	
 }
@@ -71,28 +69,27 @@ function saveKey(){
 	if (showingData != []){
 		var encrypted = CryptoJS.AES.encrypt(showingData, "pass");
 		//Llamar el server para que guarde el dato encriptado
-	}
-	else
+	} else
 		console.log("No se esta mostrando nada en pantalla.");
 }
 
+//Recibe el resultado de la busqueda encriptado para luego desenctriptarlo y mostrarlo
 function loadKey(encrypted){
 	var decrypted = CryptoJS.AES.decrypt(encrypted, "pass");
 	showingData = decrypted.toString(CryptoJS.enc.Utf8);
-	//Llamar la funcion que mostrara los graficos de lo que se desencripto
+	drawBubbles()
 }
 
 
 function searchData(){
 	
+	//Una serie de if para recorrer de forma naive los json para obtener las coincidencias, O(n) si tomamos nuestro n como la cantidad de peliculas tho
 	for (var movie of jsonMovies){
 		if (movie.getString("title") == title.value()){
 			jsonData.push(movie);
 		} else if (movie.getString("genre")	== genre.value()){
 			jsonData.push(movie);
 		} 
-		
-		
 	}
 	
 	showingData = [{"title":"After Dark in Central Park","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Boarding School Girls' Pajama Parade","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Buffalo Bill's Wild West Parad","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Caught","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Clowns Spinning Hats","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Capture of Boer Battery by British","year":1900,"director":"James H. White","cast":null,"genre":"Short documentary","notes":null},{"title":"The Enchanted Drawing","year":1900,"director":"J. Stuart Blackton","cast":null,"genre":null,"notes":null},{"title":"Family Troubles","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Feeding Sea Lions","year":1900,"director":null,"cast":"Paul Boyton","genre":null,"notes":null},{"title":"How to Make a Fat Wife Out of Two Lean Ones","year":1900,"director":null,"cast":null,"genre":"Comedy","notes":null},{"title":"New Life Rescue","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"New Morning Bath","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Searching Ruins on Broadway, Galveston, for Dead Bodies","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"The Tribulations of an Amateur Photographer","year":1900,"director":null,"cast":null,"genre":null,"notes":null},{"title":"Trouble in Hogan's Alley","year":1900,"director":null,"cast":null,"genre":"Comedy","notes":null},{"title":"Two Old Sparks","year":1900,"director":null,"cast":null,"genre":"Short","notes":"Produced by Siegmund Lubin"},{"title":"The Wonder, Ching Ling Foo","year":1900,"director":null,"cast":"Ching Ling Foo","genre":"Short","notes":"Produced by Siegmund Lubin"},{"title":"Watermelon Contest","year":1900,"director":"James H. White","cast":null,"genre":"Short","notes":null}]
@@ -100,32 +97,36 @@ function searchData(){
 }
 
 function drawBubbles(){
-	years = getYears();
+	sortedMovies = orderByYears();
 }
 
-function getYears(){
-	yearsOfMovies = {};
+
+//Se pasan los datos a una esctructura de diccionario, donde la llave es el año de la pelicula y el contenido una lista de las peliculas
+function orderByYearsaAndCategory(){
+	sortedMovies = {};
 	
 	for (var movie of showingData){
-		if (!(movie.year in yearsOfMovies))
-			yearsOfMovies[movie.year] = [];
-		yearsOfMovies[movie.year].push(movie);
+		if (!(movie.year in sortedMovies))					//Si el año de la pelicula no esta ingresado, se agrega
+			sortedMovies[movie.year] = {};
+		if (!(movie.gender in sortedMovies[movie.year])) 	//Si la categoria de la pelicula no esta en el año
+			sortedMovies[movie.year][movie.gender] = [];
+		
+		sortedMovies[movie.year][movie.gender].push(movie);
 	}
 	
-	return yearsOfMovies;
+	return sortedMovies;
 }
 
 
+//Se planeaba usar para comparar palabras que fueran similares
 function isSimilar(words, oration){
-	/*for (var currentWord of words){
-		
-	}*/
 }
+
 
 // Runs repeatedly until exit() is called.
 function draw() { 
-  background(100);
-  ball = new Bubble(mouseX, mouseY, 35); //Usado para mover una burbuja por todo el canvas -- Primer gran logro en este proyecto, en mi opinión personal
+  background(200,200,200);
+  ball = new Bubble(mouseX, mouseY, 50); //Usado para mover una burbuja por todo el canvas -- Primer gran logro en este proyecto, en mi opinión personal
   ball.show();
 }
 
@@ -142,9 +143,6 @@ class Bubble {
   
   show() {
 	stroke(255);
-	
     ellipse(this.x, this.y, this.size, this.size);
   }
 }
-
-  
