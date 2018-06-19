@@ -14,14 +14,10 @@ var ui = {
 //Components use to get the parameters from users
 var title, genre, actors, director, yearBegin, yearEnd, buttonSearch;
 
-//Codigos de colores para cada una de las burbujas según su genero
-
-function preload() {
-    var url = 'https://raw.githubusercontent.com/prust/wikipedia-movie-data/master/movies.json';
-}
-
 function setup() {
 	createCanvas(windowWidth, windowHeight);
+	console.log("Secktch is loaded");
+
 	socket = io.connect('http://localhost:8000');
 	socket.on('drawBubbles', drawBubbles);
 	loadComponents();
@@ -75,29 +71,60 @@ function saveKey(){
 
 //Recibe el resultado de la busqueda encriptado para luego desenctriptarlo y mostrarlo
 function loadKey(encrypted){
+	console.log(encrypted);/*
 	var decrypted = CryptoJS.AES.decrypt(encrypted, "pass");
 	showingData = decrypted.toString(CryptoJS.enc.Utf8);
-	drawBubbles()
+	*/
 }
+
 
 
 function searchData(){
 
-	var queryParams = {
+
+	var queryParams = [{
 		"title": ui.TextBox["title"].value(),
 		"yearBegin" : parseInt(ui.TextBox["yearBegin"].value()),
 		"yearEnd" : parseInt(ui.TextBox["yearEnd"].value()),
 		"director": ui.TextBox["director"].value(),
 		"cast":  ui.TextBox["cast"].value(),
 		"genre": ui.TextBox["genre"].value()
-	};
+	}];
 
-	socket.emit('searchMovies', queryParams);
+	console.log(queryParams);
+	console.log(JSON.stringify(queryParams));
+
+	/*fetch('http://localhost:3000/test', {
+	    method: 'POST',
+	    body: JSON.stringify(data),
+	    headers: {'Content-Type': 'application/json'}
+	}).then(response => {
+	  return response.json();
+	}).then(data => {
+	  alert(JSON.stringify(data));
+	}).catch(err => {
+	    alert(err);
+	});*/
+
+	fetch("/search", {
+    method: 'POST',
+    body: JSON.stringify(queryParams),
+    headers: {'Content-Type': 'application/json'}
+	}).then(response => {
+	  return response.json();
+	}).then(queryParams => {
+	  alert(JSON.stringify(queryParams));
+	}).catch(err => {
+	    alert(err);
+	});
+	//loadJSON("/search/searchData=\""+ JSON.stringify(queryParams) + "\"?", drawBubbles);
+	//socket.emit('searchMovies', queryParams);
+
 }
 
 function drawBubbles(movieResult){
 	console.log("Inicia");
-	console.log(movieResult);
+	console.log(movieResult.msg);
 	sortedMovies = orderByYearsaAndCategory();
 }
 

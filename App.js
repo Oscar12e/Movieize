@@ -8,6 +8,7 @@ var express = require('express'); // servidor web
 var bodyParser = require('body-parser'); // para recibir y parsear content en formato json
 var fs = require('fs');             //Used to read local readFileSync
 var socket = require("socket.io"); //Used to alow communication
+var url = require('url');
 
 
 //Constant values
@@ -176,6 +177,25 @@ function getElementIntersecInList(intersectHash, intersecAmount){
   return intersectHash[intersecAmount];
 }
 
+
+function sortMoviesToDraw(pIndexList){
+	sortedMovies = {};
+
+  for (var movieIndex in pIndexList)
+    console.log(movieIndex);
+/*
+	for (var movie of showingData){
+		if (!(movie.year in sortedMovies))					//Si el año de la pelicula no esta ingresado, se agrega
+			sortedMovies[movie.year] = {};
+		if (!(movie.gender in sortedMovies[movie.year])) 	//Si la categoria de la pelicula no esta en el año
+			sortedMovies[movie.year][movie.gender] = [];
+
+		sortedMovies[movie.year][movie.gender].push(movie);
+	}
+*/
+	return sortedMovies;
+}
+
 //Final de las funciones
 
 movieJsonList.forEach(parseMovieData); //Se filtran los datos para obtener quienes
@@ -191,9 +211,39 @@ app.use(cors())
 // publicar contenido estatico que esta en ese folder -- en la raiz
 app.use(express.static(__dirname));
 
-app.get('/home', function(request, response){
-    response.sendfile('index.html');
-});
+
+app.post("/search", getMoviesData);
+
+function testFuction(request, response){
+  console.log(request.body);
+  response.json(request.body);
+
+  //response.send(data);
+}
+
+function getMoviesData (request, response){
+   //se recibe la información dentro del body
+  var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
+  console.log(request.body);
+  var searchResults = [];           //A matrix that stores all the results found
+
+  searchResults = loadMovieDataInHash("title", data).concat(loadMovieDataInHash_Year(data),
+    loadMovieDataInHash("director", data), loadMovieDataInHash("cast", data), loadMovieDataInHash("genre", data));
+
+  if (searchResults.length == 0){
+    return;
+  }
+
+  var criteriaAmount =  String(searchResults.length);
+
+  var occurencesHash = listElementsOcurrenceInMatrix(searchResults, shortestListIndexInMatrix(searchResults));
+  var listIntersectResults = getElementIntersecInList(occurencesHash, criteriaAmount);
+  console.log(listIntersectResults);
+
+  response.json(occurencesHash);
+  //pSocket.emit('drawBubbles', listIntersectResults);
+}
+
 
 /* Codigo de la plantila que no se usa en ese momento
 app.get('/getchart', function(req, res) {
@@ -205,6 +255,10 @@ app.post('/savechart', function(req, res) {
 	res.send(req.body.words+ ' --- Hola mundo2');
 });
 */
+
+app.get('/home', function(request, response){
+    response.sendfile('index.html');
+});
 
 
 // escuchar comunicacion sobre el puerto indicado en HTTP
