@@ -10,6 +10,7 @@ var fs = require('fs');             //Used to read local readFileSync
 var socket = require("socket.io"); //Used to alow communication
 var url = require('url');
 var mcache = require("memory-cache");
+var CryptoJS = require("crypto-js");
 
 //Constant values
 var PORT_NUMBER = 8000; // constante para definir el puerto a ser usado
@@ -203,18 +204,17 @@ function getElementIntersecInList(intersectHash, intersecAmount){
 function sortMoviesToDraw(pIndexList){
 	sortedMovies = {};
 
-  for (var movieIndex in pIndexList)
-    console.log(movieIndex);
-/*
-	for (var movie of showingData){
-		if (!(movie.year in sortedMovies))					//Si el año de la pelicula no esta ingresado, se agrega
+  for (var movieIndex in pIndexList){
+    var movie = movieJsonList[movieIndex];
+
+    if (!(movie.year in sortedMovies))					//Si el año de la pelicula no esta ingresado, se agrega
 			sortedMovies[movie.year] = {};
 		if (!(movie.gender in sortedMovies[movie.year])) 	//Si la categoria de la pelicula no esta en el año
-			sortedMovies[movie.year][movie.gender] = [];
+			sortedMovies[movie.year][movie.gender] = 0;
 
-		sortedMovies[movie.year][movie.gender].push(movie);
-	}
-*/
+		sortedMovies[movie.year][movie.gender]++;
+  }
+
 	return sortedMovies;
 }
 
@@ -252,7 +252,6 @@ app.post("/search", getMoviesData);
 function getMoviesData (request, response){
    //se recibe la información dentro del body
   var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
-  console.log(request.body);
   var searchResults = [];           //A matrix that stores all the results found
 
   searchResults = loadMovieDataInHash("title", data).concat(
@@ -270,9 +269,10 @@ function getMoviesData (request, response){
   var criteriaAmount =  String(searchResults.length); //Cantidad de listas = criterio de busq
   var occurencesHash = listElementsOcurrenceInMatrix(searchResults, shortestListIndexInMatrix(searchResults));
   var listIntersectResults = getElementIntersecInList(occurencesHash, criteriaAmount);
-  console.log(listIntersectResults);
 
-  response.json(occurencesHash);
+  var sortedMovies = sortMoviesToDraw(listIntersectResults);
+
+  response.json(sortedMovies);
   //pSocket.emit('drawBubbles', listIntersectResults);
 }
 
@@ -288,16 +288,24 @@ app.get('/home', function(request, response){
     response.sendfile('index.html');
 });*/
 
+app.post('/genderColors', sendGenderColors);
+function sendGenderColors(request, response){
+  response.json(colorGender);
+}
+
+
+
+
 app.post("/saveBubbles", saveGraphic);
 function saveGraphic(request, response){
   //nuevamente se toman los datos de esta forma
  var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
- var publicKey =  makeKey();
- var encrypted = CryptoJS.AES.encrypt(showingData, publicKey);
+ var publicKey = makeKey();
+ var encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), publicKey);
  savedGraphics[publicKey] = encrypted; //Se usa la llave publica como llave pues, así puede acceder cualquier persona al hash
 
  var hashResponse = {
-   msg : publicKey
+   msg : "La llave es "+  publicKey
  };
 
  response.json(hashResponse);
@@ -315,17 +323,17 @@ function makeKey() {
 }
 
 
-
 app.post("/loadBubbles", loadGraphic);
 
-function laodGraphic(request, response){
+function loadGraphic(request, response){
   var data = request.body[0];
   var publicKey = data["key"];
 
   var encrypted = savedGraphics[publicKey];
-  var decrypted = CryptoJS.AES.decrypt(encrypted, publicKey);
+  var decrypted = CryptoJS.AES.decrypt(encrypted.toString(), publicKey);
+  var decryptedData = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
 
-  response.json(decrypted);
+  response.json(decryptedData);
 }
 
 

@@ -1,8 +1,7 @@
 //Presentation layer - Page
 
 let ball; 			//Ball create to de-stress myself
-var moviesData;		//Created to stored the json
-var showingData; 	//JSON for currently shown data
+var showingData = {}; 	//JSON for currently shown data
 
 //UI its a dictonary that holds all the acces to the component to the user interface interaction
 var socket;
@@ -19,14 +18,12 @@ function setup() {
 	console.log("Secktch is loaded");
 
 	socket = io.connect('http://localhost:8000');
-	socket.on('drawBubbles', drawBubbles);
+	//socket.on('drawBubbles', drawBubbles);
+
 	loadComponents();
 }
 
 
-function loadMovies(data){
-	//moviesData = bin25String(data["bytes"]);
-}
 
 //Se puede hacer MUCHO mejor, lo sé, pero el tiempo..
 function loadComponents(){
@@ -57,30 +54,59 @@ function loadComponents(){
 	ui.Button["buttonSearch"] = createButton('Consultar').position(620, 110);
 	ui.Button["buttonSearch"].mousePressed(searchData);
 
+
+	ui.Button["buttonSave"] = createButton('Guardar').position(270, 50);
+	ui.Button["buttonSave"].mousePressed(saveKey);
+
+
+	ui.Button["buttonLoad"] = createButton('Cargar').position(580, 50);
+	ui.Button["buttonLoad"].mousePressed(loadKey);
+
+	ui.TextBox["key"] =  createInput().position(650, 50);
+
 }
 
 
 
 function saveKey(){
-	if (showingData != []){
-		var encrypted = CryptoJS.AES.encrypt(showingData, "pass");
-		//Llamar el server para que guarde el dato encriptado
-	} else
-		console.log("No se esta mostrando nada en pantalla.");
+	var jsonToSend = [showingData];
+	console.log(jsonToSend);
+
+	fetch("/saveBubbles", {
+		method: 'POST',
+		body: JSON.stringify(jsonToSend),
+		headers: {'Content-Type': 'application/json'}
+	}).then(response => {
+		return response.json();
+	}).then(jsonToSend => {
+		alert(JSON.stringify(jsonToSend));
+	}).catch(err => {
+			alert(err);
+	});
 }
 
-//Recibe el resultado de la busqueda encriptado para luego desenctriptarlo y mostrarlo
-function loadKey(encrypted){
-	console.log(encrypted);/*
-	var decrypted = CryptoJS.AES.decrypt(encrypted, "pass");
-	showingData = decrypted.toString(CryptoJS.enc.Utf8);
-	*/
+
+function loadKey(){
+	var data = [{
+		"key": ui.TextBox["key"].value()
+	}];
+
+	fetch("/loadBubbles", {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {'Content-Type': 'application/json'}
+	}).then(response => {
+	  return response.json();
+	}).then(data => {
+	  alert(JSON.stringify(data));
+	}).catch(err => {
+	    alert(err);
+	});
 }
 
 
 
 function searchData(){
-
 
 	var queryParams = [{
 		"title": ui.TextBox["title"].value(),
@@ -91,20 +117,6 @@ function searchData(){
 		"genre": ui.TextBox["genre"].value()
 	}];
 
-	console.log(queryParams);
-	console.log(JSON.stringify(queryParams));
-
-	/*fetch('http://localhost:3000/test', {
-	    method: 'POST',
-	    body: JSON.stringify(data),
-	    headers: {'Content-Type': 'application/json'}
-	}).then(response => {
-	  return response.json();
-	}).then(data => {
-	  alert(JSON.stringify(data));
-	}).catch(err => {
-	    alert(err);
-	});*/
 
 	fetch("/search", {
     method: 'POST',
@@ -113,37 +125,18 @@ function searchData(){
 	}).then(response => {
 	  return response.json();
 	}).then(queryParams => {
-	  alert(JSON.stringify(queryParams));
+	  drawBubbles(JSON.stringify(queryParams));
 	}).catch(err => {
 	    alert(err);
 	});
-	//loadJSON("/search/searchData=\""+ JSON.stringify(queryParams) + "\"?", drawBubbles);
-	//socket.emit('searchMovies', queryParams);
+
 
 }
 
 function drawBubbles(movieResult){
 	console.log("Inicia");
-	console.log(movieResult.msg);
-	sortedMovies = orderByYearsaAndCategory();
-}
-
-
-//Se pasan los datos a una esctructura de diccionario, donde la llave es el año de la pelicula y el contenido una lista de las peliculas
-function orderByYearsaAndCategory(){
-	sortedMovies = {};
-
-/*
-	for (var movie of showingData){
-		if (!(movie.year in sortedMovies))					//Si el año de la pelicula no esta ingresado, se agrega
-			sortedMovies[movie.year] = {};
-		if (!(movie.gender in sortedMovies[movie.year])) 	//Si la categoria de la pelicula no esta en el año
-			sortedMovies[movie.year][movie.gender] = [];
-
-		sortedMovies[movie.year][movie.gender].push(movie);
-	}
-*/
-	return sortedMovies;
+	console.log(movieResult);
+	showingData = JSON.parse(movieResult);
 }
 
 
