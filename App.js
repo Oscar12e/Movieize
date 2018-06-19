@@ -9,7 +9,7 @@ var bodyParser = require('body-parser'); // para recibir y parsear content en fo
 var fs = require('fs');             //Used to read local readFileSync
 var socket = require("socket.io"); //Used to alow communication
 var url = require('url');
-
+var mcache = require("memory-cache");
 
 //Constant values
 var PORT_NUMBER = 8000; // constante para definir el puerto a ser usado
@@ -18,6 +18,23 @@ var PORT_NUMBER = 8000; // constante para definir el puerto a ser usado
 var app = new express();
 var movieJsonList = JSON.parse(fs.readFileSync("data/movies.json", "utf8"));
 var io;   //Variable para los sockets
+var cache = (duration) => {
+  return (req, res, next) => {
+    let key = '_express_' + req.originalUrl || req.url;
+    let cachedBody = mcache.get(key);
+
+    if (cachedBody){
+      res.send(cachedBody);
+      return;
+    } else {
+      res.send = (body) => {
+        mcache.put(key, body, duration *1000);
+        res.sendResponse(body);
+      }
+      next();
+    }
+  }
+}
 //Movie data holds as a dict
 
 var movieData = {
@@ -31,7 +48,12 @@ var movieData = {
 var colorGender = {
 	"Comedy": (0,255,0),
 	"null": (255,255,255)
-}
+};
+
+
+var savedGraphics = {
+
+};
 
 
 /**/
@@ -212,39 +234,6 @@ app.use(cors())
 app.use(express.static(__dirname));
 
 
-app.post("/search", getMoviesData);
-
-function testFuction(request, response){
-  console.log(request.body);
-  response.json(request.body);
-
-  //response.send(data);
-}
-
-function getMoviesData (request, response){
-   //se recibe la información dentro del body
-  var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
-  console.log(request.body);
-  var searchResults = [];           //A matrix that stores all the results found
-
-  searchResults = loadMovieDataInHash("title", data).concat(loadMovieDataInHash_Year(data),
-    loadMovieDataInHash("director", data), loadMovieDataInHash("cast", data), loadMovieDataInHash("genre", data));
-
-  if (searchResults.length == 0){
-    return;
-  }
-
-  var criteriaAmount =  String(searchResults.length);
-
-  var occurencesHash = listElementsOcurrenceInMatrix(searchResults, shortestListIndexInMatrix(searchResults));
-  var listIntersectResults = getElementIntersecInList(occurencesHash, criteriaAmount);
-  console.log(listIntersectResults);
-
-  response.json(occurencesHash);
-  //pSocket.emit('drawBubbles', listIntersectResults);
-}
-
-
 /* Codigo de la plantila que no se usa en ese momento
 app.get('/getchart', function(req, res) {
 	res.send(req.query.temp+' '+ req.query.title+ ' --- Hola mundo');
@@ -256,9 +245,88 @@ app.post('/savechart', function(req, res) {
 });
 */
 
+//Comunicacion para la obtencion de las peliculas necesarias para hacer la
+//grafica según lo que el cliente pide
+app.post("/search", getMoviesData);
+
+function getMoviesData (request, response){
+   //se recibe la información dentro del body
+  var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
+  console.log(request.body);
+  var searchResults = [];           //A matrix that stores all the results found
+
+  searchResults = loadMovieDataInHash("title", data).concat(
+      loadMovieDataInHash_Year(data),
+      loadMovieDataInHash("director", data),
+      loadMovieDataInHash("cast", data),
+      loadMovieDataInHash("genre", data));
+
+  //Si no se dio ninguna coincidencia
+  if (searchResults.length == 0){
+    return;
+  }
+
+
+  var criteriaAmount =  String(searchResults.length); //Cantidad de listas = criterio de busq
+  var occurencesHash = listElementsOcurrenceInMatrix(searchResults, shortestListIndexInMatrix(searchResults));
+  var listIntersectResults = getElementIntersecInList(occurencesHash, criteriaAmount);
+  console.log(listIntersectResults);
+
+  response.json(occurencesHash);
+  //pSocket.emit('drawBubbles', listIntersectResults);
+}
+
+app.get('/', cache(10), (req, res) => {
+  let displayMessage = 'Looks like something happend, we sent a thousend of well trained monkeys to solve your problem.';
+  setTimeout(() =>{
+    res.sender('index', {title: 'Hey', message: displayMessage, date: new Date()})
+  }, 10000) //Proceso para simular simular problemas de carga
+})
+
+/* Acceso sin cache
 app.get('/home', function(request, response){
     response.sendfile('index.html');
-});
+});*/
+
+app.post("/saveBubbles", saveGraphic);
+function saveGraphic(request, response){
+  //nuevamente se toman los datos de esta forma
+ var data = request.body[0]; //Se toma el indice 0 pues solo se pasa un argumento, que queda en dicho indice
+ var publicKey =  makeKey();
+ var encrypted = CryptoJS.AES.encrypt(showingData, publicKey);
+ savedGraphics[publicKey] = encrypted; //Se usa la llave publica como llave pues, así puede acceder cualquier persona al hash
+
+ var hashResponse = {
+   msg : publicKey
+ };
+
+ response.json(hashResponse);
+}
+
+//Use to generate a key with random text
+function makeKey() {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < 5; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}
+
+
+
+app.post("/loadBubbles", loadGraphic);
+
+function laodGraphic(request, response){
+  var data = request.body[0];
+  var publicKey = data["key"];
+
+  var encrypted = savedGraphics[publicKey];
+  var decrypted = CryptoJS.AES.decrypt(encrypted, publicKey);
+
+  response.json(decrypted);
+}
 
 
 // escuchar comunicacion sobre el puerto indicado en HTTP
